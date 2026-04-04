@@ -18,6 +18,7 @@ dist/RevitLogic.dll (the reloadable logic assembly)
 
 Project structure:
 
+```text
 RevitAddinHotReloadDemo
 │
 ├─ dist
@@ -34,6 +35,7 @@ RevitAddinHotReloadDemo
 └─ RevitLogic
     Entry.cs
     RevitLogic.csproj
+    ```
 
 ---
 
@@ -113,6 +115,7 @@ Why this approach is used:
 
 Execution flow:
 
+```text
 Revit
  ↓
 CommandButton
@@ -122,6 +125,7 @@ Loader.Call()
 Load dist/RevitLogic.dll
  ↓
 Execute Entry.Run()
+```
 
 ---
 
@@ -207,30 +211,8 @@ powershell -ExecutionPolicy Bypass -File .\release.ps1 -Version 0.1.0
 
 ---
 
-## 8. Recommended Build Script
 
-Create:
-
-build.ps1
-
-Content:
-
-dotnet build .\RevitLogic\RevitLogic.csproj -v minimal
-
-Copy-Item .\RevitLogic\bin\Debug\RevitLogic.dll .\dist\RevitLogic.dll -Force
-Copy-Item .\RevitLogic\bin\Debug\RevitLogic.pdb .\dist\RevitLogic.pdb -Force
-
-Write-Host "RevitLogic updated"
-
-Usage:
-
-.\build.ps1
-
-This updates the Logic DLL in `dist`.
-
----
-
-## 9. Why Use the Host + Logic Architecture
+## 8. Why Use the Host + Logic Architecture
 
 The biggest limitation of Revit Add-ins is:
 
@@ -254,7 +236,7 @@ and the updated Logic can be used immediately.
 
 ---
 
-## 10. Future Extensions
+## 9. Future Extensions
 
 This architecture can be expanded into:
 
@@ -271,7 +253,7 @@ It is suitable for:
 
 ---
 
-## 11. Revit Add-in Registration Manifest (`.addin`)
+## 10. Revit Add-in Registration Manifest (`.addin`)
 
 Revit reads an XML manifest file at startup to know:
 
@@ -281,8 +263,9 @@ Revit reads an XML manifest file at startup to know:
 Without this file, Revit does not know that your add-in exists.
 
 To generate a new GUID in PowerShell:
-
+```
 [guid]::NewGuid().ToString().ToUpper()
+```
 
 Create this file at:
 
@@ -290,6 +273,7 @@ C:\Users\AppData\Roaming\Autodesk\Revit\Addins\2024\RevitAddinHotReloadDemo.addi
 
 Example manifest:
 
+```
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <RevitAddIns>
   <AddIn Type="Application">
@@ -301,3 +285,4 @@ Example manifest:
     <VendorDescription>RevitAddinHotReloadDemo</VendorDescription>
   </AddIn>
 </RevitAddIns>
+```

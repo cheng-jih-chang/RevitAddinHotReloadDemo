@@ -11,8 +11,8 @@ namespace RevitAddinHost
     {
         public Result OnStartup(UIControlledApplication application)
         {
-            const string tabName = "RevitAddinHotReloadDemo_v0.1.1";
-            const string panelName = "HotReloadDemo_v0.1.1";
+            const string tabName = "RevitAddinHotReload_v0.1.1";
+            const string panelName = "HotReload_v0.1.1";
 
             try { application.CreateRibbonTab(tabName); } catch { }
 
