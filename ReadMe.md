@@ -1,22 +1,23 @@
-# RevitAddinHotReloadDemo 架構
+# RevitAddinHotReloadDemo Architecture
 
-## 1. 整體架構
+## 1. Overall Architecture
 
-本專案採用 **Host + Logic 分離架構**，讓 Revit Add-in 可以做到類似 Hot Reload 的開發流程。
+This project uses a **Host + Logic separation architecture** so that a Revit Add-in can support a workflow similar to Hot Reload.
 
-```
+### Load Flow
+
+```text
 Revit
-   ↓
-RevitAddinHost.dll   (固定 Host)
-   ↓
+  ↓
+RevitAddinHost.dll  (the stable host assembly)
+  ↓
 Loader.cs
-   ↓
-dist/RevitLogic.dll  (可替換 Logic)
+  ↓
+dist/RevitLogic.dll (the reloadable logic assembly)
 ```
 
-專案結構：
+Project structure:
 
-```
 RevitAddinHotReloadDemo
 │
 ├─ dist
@@ -33,65 +34,57 @@ RevitAddinHotReloadDemo
 └─ RevitLogic
     Entry.cs
     RevitLogic.csproj
-```
 
 ---
 
-# 2. 各專案角色
+## 2. Role of Each Project
 
-## RevitAddinHost (Host)
+### RevitAddinHost (Host)
 
-這個 DLL 會被 Revit 直接載入。
+This DLL is loaded directly by Revit.
 
-負責：
+Responsibilities:
 
-- 建立 Ribbon UI
-- 按鈕 Command
-- 載入 Logic DLL
+- Create the Ribbon UI
+- Handle button commands
+- Load the Logic DLL
 
-主要檔案：
+Main files:
 
-```
 App.cs
 CommandButton1.cs
 CommandButton2.cs
 Loader.cs
-```
 
-Revit 啟動時：
+When Revit starts:
 
-```
 Revit
  ↓
 Load RevitAddinHost.dll
  ↓
 App.OnStartup()
  ↓
-建立 Ribbon
-```
+Create Ribbon
 
 ---
 
-## RevitLogic (Logic)
+### RevitLogic (Logic)
 
-這是 **真正的功能程式碼**。
+This is the **actual feature implementation** layer.
 
-例如：
+For example:
 
-- 自動標註
-- BOP 計算
-- 套管生成
-- Dynamo 轉 C# 功能
+- Automatic annotation
+- BOP calculation
+- Sleeve generation
+- Dynamo-to-C# converted features
 
-主要入口：
+Main entry point:
 
-```
 Entry.cs
-```
 
-例如：
+Example:
 
-```
 namespace RevitLogic
 {
     public class Entry
@@ -102,28 +95,24 @@ namespace RevitLogic
         }
     }
 }
-```
 
 ---
 
-# 3. Loader 的作用
+## 3. What the Loader Does
 
-Loader 會在執行時載入 `dist/RevitLogic.dll`。
+The Loader loads `dist/RevitLogic.dll` at runtime.
 
-```
 byte[] asmBytes = File.ReadAllBytes(LogicDllPath);
 Assembly asm = Assembly.Load(asmBytes);
-```
 
-這樣做的原因：
+Why this approach is used:
 
-- 避免 Revit 鎖住 DLL
-- 可以覆蓋 dist DLL
-- 支援 Hot Reload
+- Avoids Revit locking the DLL
+- Allows the DLL in `dist` to be overwritten
+- Supports a Hot Reload-like workflow
 
-流程：
+Execution flow:
 
-```
 Revit
  ↓
 CommandButton
@@ -133,101 +122,81 @@ Loader.Call()
 Load dist/RevitLogic.dll
  ↓
 Execute Entry.Run()
-```
 
 ---
 
-# 4. 為什麼要用 dist 資料夾
+## 4. Why Use the `dist` Folder
 
-RevitLogic build 出來的 DLL 在：
+The compiled DLL from RevitLogic is generated at:
 
-```
 RevitLogic/bin/Debug/RevitLogic.dll
-```
 
-但 Revit 執行時讀的是：
+But the DLL actually loaded by Revit is:
 
-```
 dist/RevitLogic.dll
-```
 
-所以 build 後需要 copy。
+So after building, the output must be copied into `dist`.
 
 ---
 
-# 5. 日常開發流程 (Hot Reload)
+## 5. Daily Development Workflow (Hot Reload Style)
 
-修改：
+If you modify:
 
-```
 RevitLogic/Entry.cs
-```
 
-只需要：
+You only need to run:
 
-```
 dotnet build .\RevitLogic\RevitLogic.csproj
 
 Copy-Item .\RevitLogic\bin\Debug\RevitLogic.dll .\dist\RevitLogic.dll -Force
 Copy-Item .\RevitLogic\bin\Debug\RevitLogic.pdb .\dist\RevitLogic.pdb -Force
-```
 
-然後：
+Then:
 
-```
-回 Revit
-按 Ribbon 按鈕
-```
+Go back to Revit
+Click the Ribbon button
 
-新的 Logic 就會被載入。
+The updated Logic DLL will be loaded.
 
-不需要：
+You do **not** need to:
 
-- 重開 Revit
-- rebuild Host
+- Restart Revit
+- Rebuild the Host project
 
 ---
 
-# 6. 什麼時候需要重開 Revit
+## 6. When Revit Must Be Restarted
 
-判斷規則：
+Rule of thumb:
 
-| 修改檔案          | 是否需要重開 Revit |
-| ----------------- | ------------------ |
-| RevitLogic/\*     | 不需要             |
-| RevitAddinHost/\* | 需要               |
+| Modified files       | Need to restart Revit? |
+| -------------------- | ---------------------- |
+| RevitLogic/*         | No                     |
+| RevitAddinHost/*     | Yes                    |
 
-原因：
+Reason:
 
-Revit 啟動時會載入：
+Revit loads:
 
-```
 RevitAddinHost.dll
-```
 
-而 .NET Framework：
+during startup, and in .NET Framework:
 
-```
-Assembly 無法卸載
-```
+Assemblies cannot be unloaded individually
 
-所以 Host DLL 會被鎖住。
+So the Host DLL remains locked for the current Revit session.
 
 ---
 
-# 7. 正確開發節奏
+## 7. Recommended Development Rhythm
 
-第一次啟動前：
+Before the first launch:
 
-```
 dotnet build .\RevitAddinHost\RevitAddinHost.csproj
-```
 
-之後整天：
+After that, during normal development, only build the Logic project.
 
-只 build Logic。
-
-```
 dotnet build .\RevitLogic\RevitLogic.csproj
 
 powershell -ExecutionPolicy Bypass -File .\build.ps1
@@ -235,106 +204,100 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 powershell -ExecutionPolicy Bypass -File .\release.ps1
 
 powershell -ExecutionPolicy Bypass -File .\release.ps1 -Version 0.1.0
-```
 
 ---
 
-# 8. 建議建立 build script
+## 8. Recommended Build Script
 
-建立：
+Create:
 
-```
 build.ps1
-```
 
-內容：
+Content:
 
-```
 dotnet build .\RevitLogic\RevitLogic.csproj -v minimal
 
 Copy-Item .\RevitLogic\bin\Debug\RevitLogic.dll .\dist\RevitLogic.dll -Force
 Copy-Item .\RevitLogic\bin\Debug\RevitLogic.pdb .\dist\RevitLogic.pdb -Force
 
 Write-Host "RevitLogic updated"
-```
 
-使用：
+Usage:
 
-```
 .\build.ps1
-```
 
-更新 Logic DLL。
+This updates the Logic DLL in `dist`.
 
 ---
 
-# 9. 為什麼要用 Host + Logic 架構
+## 9. Why Use the Host + Logic Architecture
 
-Revit Add-in 最大問題：
+The biggest limitation of Revit Add-ins is:
 
-```
-Revit 不支援 Hot Reload
-```
+Revit does not support Hot Reload
 
-DLL 被鎖住。
+The DLL is locked after being loaded.
 
-解法：
+The solution is:
 
-```
-Host (固定)
-Logic (可替換)
-```
+Host (stable)
+Logic (replaceable)
 
-這樣：
+This allows the following workflow:
 
-```
-改程式
+edit code
 build
 copy
-按按鈕
-```
+click button
 
-就能更新。
+and the updated Logic can be used immediately.
 
 ---
 
-# 10. 未來可擴充
+## 10. Future Extensions
 
-這個架構可以升級成：
+This architecture can be expanded into:
 
-- 多 Command Routing
-- 自動 build script
-- DLL 版本檢查
-- 動態 plugin system
+- Multi-command routing
+- Automated build scripts
+- DLL version checking
+- Dynamic plugin systems
 
-適合：
+It is suitable for:
 
-- 大型 Revit Add-in
-- Dynamo → C# 轉換專案
-- BIM 自動化工具
+- Large Revit Add-ins
+- Dynamo-to-C# migration projects
+- BIM automation tools
 
-# 11. Revit 外掛的註冊清單（.addin manifest）。
+---
 
-Revit 啟動時會去讀XML，知道「要載入哪個 DLL、從哪個類別開始執行」。沒有它，Revit 不知道你的外掛存在。
+## 11. Revit Add-in Registration Manifest (`.addin`)
 
-產生新的 GUID 在PowerShell 跑：
-```
+Revit reads an XML manifest file at startup to know:
+
+- which DLL to load
+- which class is the entry point
+
+Without this file, Revit does not know that your add-in exists.
+
+To generate a new GUID in PowerShell:
+
 [guid]::NewGuid().ToString().ToUpper()
-```
 
+Create this file at:
 
-興建檔案: C:\Users\AppData\Roaming\Autodesk\Revit\Addins\2024\RevitAddinHotReloadDemo.addin
-```
+C:\Users\AppData\Roaming\Autodesk\Revit\Addins\2024\RevitAddinHotReloadDemo.addin
+
+Example manifest:
 
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <RevitAddIns>
   <AddIn Type="Application">
     <Name>RevitAddinHotReloadDemo</Name>
     <Assembly>D:\Project\BIM+C#\RevitAddinHotReloadDemo\RevitAddinHost\bin\Debug\RevitAddinHost.dll</Assembly>
-    <AddInId>新的 GUID</AddInId>
+    <AddInId>NEW-GUID-HERE</AddInId>
     <FullClassName>RevitAddinHost.App</FullClassName>
     <VendorId>TEST</VendorId>
     <VendorDescription>RevitAddinHotReloadDemo</VendorDescription>
   </AddIn>
 </RevitAddIns>
-```
