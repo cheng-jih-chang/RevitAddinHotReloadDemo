@@ -5,7 +5,7 @@ using System.Text;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 
-namespace RevitAddinHost
+namespace RevitAddinHostDemo
 {
     public class App : IExternalApplication
     {

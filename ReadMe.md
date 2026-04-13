@@ -174,10 +174,10 @@ You do **not** need to:
 
 Rule of thumb:
 
-| Modified files       | Need to restart Revit? |
-| -------------------- | ---------------------- |
-| RevitLogic/*         | No                     |
-| RevitAddinHost/*     | Yes                    |
+| Modified files   | Need to restart Revit? |
+| ---------------- | ---------------------- |
+| RevitLogic/*     | No                     |
+| RevitAddinHost/* | Yes                    |
 
 Reason:
 
@@ -197,7 +197,7 @@ So the Host DLL remains locked for the current Revit session.
 
 Before the first launch:
 
-dotnet build .\RevitAddinHost\RevitAddinHost.csproj
+dotnet build .\RevitAddinHost\RevitAddinHostDemo.csproj
 
 After that, during normal development, only build the Logic project.
 
@@ -266,6 +266,7 @@ To generate a new GUID in PowerShell:
 ```
 [guid]::NewGuid().ToString().ToUpper()
 ```
+
 
 Create this file at:
 
